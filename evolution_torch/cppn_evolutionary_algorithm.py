@@ -16,7 +16,10 @@ from evolution_torch.autoencoder import initialize_encoders, AutoEncoder
 
 class CPPNEvolutionaryAlgorithm(object):
     def __init__(self, config, debug_output=False) -> None:
-        torch.autograd.set_grad_enabled(False)
+        if self.config.with_grad:
+            torch.autograd.set_grad_enabled(True)
+        else:
+            torch.autograd.set_grad_enabled(False)
         self.gen = 0
         self.debug_output = debug_output
         self.show_output = False
