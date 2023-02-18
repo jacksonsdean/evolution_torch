@@ -1,7 +1,7 @@
 """Stores configuration parameters for the CPPN."""
 import random
 import torch
-
+import imageio as iio
 from cppn_torch.activation_functions import *
 from cppn_torch import CPPNConfig as Config
 
@@ -60,3 +60,58 @@ class AlgorithmConfig(Config):
         
         self._make_dirty()
         
+def apply_condition(config, controls, condition, name, name_to_function_map):
+    config.name = name
+    config.experiment_condition = name
+    
+    if len(controls) > 0:
+        for k,v in controls.items():
+            print("\t Control:", k, "->", v)
+            config.apply_condition(k, v)
+            if k == "num_runs":
+                config.num_runs = v
+            if k == "target":
+                config.target = v
+                config.target_name = config.target
+                config.target = torch.tensor(iio.imread(config.target), dtype=torch.float32, device=config.device)
+                config.res_h, config.res_w = config.target.shape[:2]
+        
+        config.fitness_function = name_to_function_map.get( config.fitness_function)
+        if config.fitness_function is None:
+            raise Exception(f"Fitness function {config.fitness_function} not found")
+        
+    if len(condition) > 0:
+        for k, v in condition.items():
+            if k is not None:
+                print(f"\t\tapply {k}->{v}")
+                config.apply_condition(k, v)
+            if k == "target":
+                config.target = v
+                if isinstance(config.target, str):
+                    config.target_name = config.target
+                    config.target = torch.tensor(iio.imread(config.target), dtype=torch.float32, device=config.device)
+                config.res_h, config.res_w = config.target.shape[:2]
+   
+    if config.fitness_schedule is not None:
+        for i,fn in enumerate(config.fitness_schedule):
+            if isinstance(fn, str):
+                config.fitness_schedule[i] = ff.__dict__.get(fn)
+                if config.fitness_schedule[i] is None:
+                    raise Exception(f"Fitness function {fn} not found")
+
+    if config.color_mode=="L":
+        config.target = config.target.mean(dim=2)
+
+    if config.target.max() > 1.0:
+        config.target = config.target.to(torch.float32) /255.0
+    
+    if len(config.color_mode) != config.num_outputs:
+        print("WARNING: color_mode does not match num_outputs")
+        print("setting num_outputs to len(color_mode)")
+        config.num_outputs = len(config.color_mode)
+    config.device = torch.device(config.device)
+    config.target = config.target.to(config.device)     
+
+    for i in range(len(config.activations)):
+        if isinstance(config.activations[i], str):
+            config.activations[i] = af.__dict__.get(config.activations[i])  
