@@ -52,8 +52,8 @@ class AlgorithmConfig(Config):
 
         self.prob_random_restart = 0
         
+        self.autoencoder_frequency = 0 # legacy, should be move to subclasses
         
-        # EA
         self.run_id = 0
         self.output_dir = "output/default"
         self.experiment_condition = "_default"
