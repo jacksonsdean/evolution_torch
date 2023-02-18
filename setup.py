@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name='evolution_torch',
-    version='0.0.2',
+    version='0.0.3',
     author='Jackson Dean',
     author_email='jackson@downbeat.games',
     description='Evolutionary algorithm implementation in PyTorch',
