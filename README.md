@@ -3,7 +3,7 @@
 ## Installation
 With CUDA: 
 
-`pip install  git+https://github.com/jacksonsdean/evolution_torch.git --extra-index-url https://download.pytorch.org/whl/cu116`
+`pip install  git+ssh://git@github.com:jacksonsdean/evolution_torch.git --extra-index-url https://download.pytorch.org/whl/cu116`
 
 ## Usage
 
