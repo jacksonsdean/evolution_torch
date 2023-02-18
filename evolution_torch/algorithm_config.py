@@ -3,6 +3,7 @@ import random
 import torch
 import imageio as iio
 from cppn_torch.activation_functions import *
+import cppn_torch.activation_functions as af
 from cppn_torch import CPPNConfig as Config
 
 class AlgorithmConfig(Config):
@@ -95,7 +96,7 @@ def apply_condition(config, controls, condition, name, name_to_function_map):
     if config.fitness_schedule is not None:
         for i,fn in enumerate(config.fitness_schedule):
             if isinstance(fn, str):
-                config.fitness_schedule[i] = ff.__dict__.get(fn)
+                config.fitness_schedule[i] = name_to_function_map.get(fn)
                 if config.fitness_schedule[i] is None:
                     raise Exception(f"Fitness function {fn} not found")
 
