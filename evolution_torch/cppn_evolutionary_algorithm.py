@@ -21,7 +21,6 @@ class EvolutionaryAlgorithm(object):
         self.debug_output = debug_output
         self.show_output = False
         self.config = config
-        Node.current_id =  self.config.num_inputs + self.config.num_outputs # reset node id counter
         
         self.results = pd.DataFrame(columns=['condition', 'run', 'gen', 'fitness', 'diversity', 'population', 'avg_num_connections', 'avg_num_hidden_nodes', 'max_num_connections', 'max_num_hidden_nodes', 'time'])
                 
