@@ -16,25 +16,6 @@ from cppn_torch.graph_util import get_ids_from_individual, required_for_output
 BASELINE_PATH = "baseline/"
 
 warnings.filterwarnings("ignore") # uh oh
-    
-def _get_baseline_max_min_fits():
-    """Get the baseline max and min fitnesses for each function."""
-    if not os.path.exists(BASELINE_PATH):
-        return {}, {}
-    max_fits = {}
-    min_fits = {}
-    fns_dir = os.path.join(BASELINE_PATH, "fits")
-    if not os.path.exists(fns_dir):
-        return max_fits, min_fits
-    for fn in os.listdir(fns_dir):
-        fn_path = os.path.join(fns_dir, fn)
-        min_file = os.path.join(fn_path, "min_fit.txt")
-        max_file = os.path.join(fn_path, "max_fit.txt")
-        with open(min_file, 'r') as f:
-            min_fits[fn] = float(f.read())
-        with open(max_file, 'r') as f:
-            max_fits[fn] = float(f.read())
-    return max_fits, min_fits   
 
 def visualize_network(individual, sample_point=None, color_mode="L", visualize_disabled=False, layout='multi', sample=False, show_weights=False, use_inp_bias=False, use_radial_distance=True, save_name=None, extra_text=None, curved=False, return_fig=False):
     # TODO: total mess

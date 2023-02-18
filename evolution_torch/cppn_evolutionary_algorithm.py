@@ -14,7 +14,7 @@ from cppn_torch.graph_util import name_to_fn
 from autoencoder import initialize_encoders, AutoEncoder
 from util import get_avg_number_of_connections, get_avg_number_of_hidden_nodes, get_max_number_of_connections, visualize_network, get_max_number_of_hidden_nodes
 
-class EvolutionaryAlgorithm(object):
+class CPPNEvolutionaryAlgorithm(object):
     def __init__(self, config, debug_output=False) -> None:
         torch.autograd.set_grad_enabled(False)
         self.gen = 0
