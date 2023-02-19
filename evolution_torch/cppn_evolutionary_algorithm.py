@@ -258,6 +258,7 @@ class CPPNEvolutionaryAlgorithm(object):
                 self.solution_generation = self.gen
                 self.best_genome = self.solution
             
+            os.makedirs(os.path.join(self.config.output_dir, 'images'), exist_ok=True)
             self.save_best_img(os.path.join(self.config.output_dir, "images", f"current_best_output.png"))
         
         if self.solution is not None:
@@ -315,6 +316,7 @@ class CPPNEvolutionaryAlgorithm(object):
         print("Generation", self.gen, "="*100)
         class Dummy:
             def __init__(self):
+                
                 self.fitness = 0; self.id = -1
         b = self.get_best()
         if b is None: b = Dummy()
