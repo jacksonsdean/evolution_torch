@@ -238,7 +238,7 @@ class CPPNEvolutionaryAlgorithm(object):
         
         if len(self.population) > 0:
             self.population = sorted(self.population, key=lambda x: x.fitness.item(), reverse=True) # sort by fitness
-            self.this_gen_best = self.population[0].clone(cpu=True)  # still sorted by fitness
+            self.this_gen_best = self.population[0].clone(cpu=True,deepcopy=False)  # still sorted by fitness
         
         # std_distance, avg_distance, max_diff = calculate_diversity_full(self.population)
         std_distance, avg_distance, max_diff = calculate_diversity_stochastic(self.population)
