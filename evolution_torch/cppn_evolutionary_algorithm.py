@@ -238,6 +238,8 @@ class CPPNEvolutionaryAlgorithm(object):
         
         if len(self.population) > 0:
             self.population = sorted(self.population, key=lambda x: x.fitness.item(), reverse=True) # sort by fitness
+            if self.config.with_grad:
+                self.population[0].discard_grads()
             self.this_gen_best = self.population[0].clone(cpu=True)  # still sorted by fitness
         
         # std_distance, avg_distance, max_diff = calculate_diversity_full(self.population)
