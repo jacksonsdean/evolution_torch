@@ -119,8 +119,8 @@ def apply_condition(config, controls, condition, name, name_to_function_map):
         config.color_mode = "L"
         
     if config.color_mode == "L":
-        print(config.target.shape)
-        config.target = config.target.unsqueeze(-1).repeat(1,1,3) # loss functions expect 3 channels
+        if len(config.target.shape) == 2:
+            config.target = config.target.unsqueeze(-1).repeat(1,1,3) # loss functions expect 3 channels
                 
     
     if len(config.color_mode) != config.num_outputs:
