@@ -118,8 +118,8 @@ def apply_condition(config, controls, condition, name, name_to_function_map):
         print("Warning: color mode is RGB or HSV but target is grayscale. Setting color mode to L.")
         config.color_mode = "L"
         
-    # if config.color_mode == "L":
-        # config.target = config.target.unsqueeze(-1).repeat(1,1,3) # loss functions expect 3 channels
+    if config.color_mode == "L":
+        config.target = config.target.unsqueeze(-1).repeat(1,1,3) # loss functions expect 3 channels
                 
     
     if len(config.color_mode) != config.num_outputs:
