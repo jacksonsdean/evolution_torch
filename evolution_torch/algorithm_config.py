@@ -103,8 +103,8 @@ def apply_condition(config, controls, condition, name, name_to_function_map):
                 if config.fitness_schedule[i] is None:
                     raise Exception(f"Fitness function {fn} not found")
 
-    if config.color_mode=="L":
-        config.target = config.target.mean(dim=2)
+    # if config.color_mode=="L":
+        # config.target = config.target.mean(dim=2)
 
     if config.target.max() > 1.0:
         config.target = config.target.to(torch.float32) /255.0
