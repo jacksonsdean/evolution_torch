@@ -122,7 +122,7 @@ def apply_condition(config, controls, condition, name, name_to_function_map):
     
     if len(config.color_mode) != config.num_outputs:
         print("WARNING: color_mode does not match num_outputs")
-        print("setting num_outputs to len(color_mode)")
+        print("\tsetting num_outputs to len(color_mode)")
         config.num_outputs = len(config.color_mode)
     config.device = torch.device(config.device)
     config.target = config.target.to(config.device)     
