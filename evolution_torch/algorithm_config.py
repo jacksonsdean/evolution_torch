@@ -74,8 +74,12 @@ def apply_condition(config, controls, condition, name, name_to_function_map):
             if k == "target":
                 config.target = v
                 config.target_name = config.target
-                pilmode = "RGB" if len(config.color_mode) == 3 else "L"
-                config.target = torch.tensor(iio.imread(config.target, pilmode=pilmode, as_gray=len(config.color_mode)==1), dtype=torch.float32, device=config.device)
+                # pilmode = "RGB" if len(config.color_mode) == 3 else "L"
+                # config.target = torch.tensor(iio.imread(config.target, pilmode=pilmode, as_gray=len(config.color_mode)==1), dtype=torch.float32, device=config.device)
+                config.target = torch.tensor(iio.imread(config.target, as_gray=len(config.color_mode)==1), dtype=torch.float32, device=config.device)
+                # config.target = config.target / 255.0
+                
+                
                 config.res_h, config.res_w = config.target.shape[:2]
         
         config.fitness_function = name_to_function_map.get( config.fitness_function)
@@ -91,8 +95,9 @@ def apply_condition(config, controls, condition, name, name_to_function_map):
                 config.target = v
                 if isinstance(config.target, str):
                     config.target_name = config.target
-                    pilmode = "RGB" if len(config.color_mode) == 3 else "L"
-                    config.target = torch.tensor(iio.imread(config.target, pilmode=pilmode, as_gray=len(config.color_mode)==1), dtype=torch.float32, device=config.device)
+                    # pilmode = "RGB" if len(config.color_mode) == 3 else "L"
+                    # config.target = torch.tensor(iio.imread(config.target, pilmode=pilmode, as_gray=len(config.color_mode)==1), dtype=torch.float32, device=config.device)
+                    config.target = torch.tensor(iio.imread(config.target, as_gray=len(config.color_mode)==1), dtype=torch.float32, device=config.device)
 
                 config.res_h, config.res_w = config.target.shape[:2]
    
@@ -108,6 +113,12 @@ def apply_condition(config, controls, condition, name, name_to_function_map):
 
     if config.target.max() > 1.0:
         config.target = config.target.to(torch.float32) /255.0
+    
+    if len(config.target.shape) < len(config.color_mode):
+        print("Warning: color mode is RGB or HSV but target is grayscale. Setting color mode to L.")
+        config.color_mode = "L"
+        config.target = config.target.unsqueeze(-1).repeat(1,1,3) # loss functions expect 3 channels
+                
     
     if len(config.color_mode) != config.num_outputs:
         print("WARNING: color_mode does not match num_outputs")
