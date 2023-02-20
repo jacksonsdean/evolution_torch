@@ -75,7 +75,7 @@ def apply_condition(config, controls, condition, name, name_to_function_map):
                 config.target = v
                 config.target_name = config.target
                 pilmode = "RGB" if len(config.color_mode) == 3 else "L"
-                config.target = torch.tensor(iio.imread(config.target), dtype=torch.float32, device=config.device, pilmode=pilmode, as_gray=len(config.color_mode)==1)
+                config.target = torch.tensor(iio.imread(config.target, pilmode=pilmode, as_gray=len(config.color_mode)==1), dtype=torch.float32, device=config.device)
                 config.res_h, config.res_w = config.target.shape[:2]
         
         config.fitness_function = name_to_function_map.get( config.fitness_function)
@@ -92,7 +92,7 @@ def apply_condition(config, controls, condition, name, name_to_function_map):
                 if isinstance(config.target, str):
                     config.target_name = config.target
                     pilmode = "RGB" if len(config.color_mode) == 3 else "L"
-                    config.target = torch.tensor(iio.imread(config.target), dtype=torch.float32, device=config.device, pilmode=pilmode, as_gray=len(config.color_mode)==1)
+                    config.target = torch.tensor(iio.imread(config.target, pilmode=pilmode, as_gray=len(config.color_mode)==1), dtype=torch.float32, device=config.device)
 
                 config.res_h, config.res_w = config.target.shape[:2]
    
