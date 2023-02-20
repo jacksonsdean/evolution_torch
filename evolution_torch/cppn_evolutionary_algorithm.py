@@ -52,7 +52,9 @@ class CPPNEvolutionaryAlgorithm(object):
         
         if len(self.target.shape) < 3:
             # grayscale image
-            self.config.color_mode = "L"
+            if self.config.color_mode != "L":
+                print("WARNING: target image is grayscale, but color_mode is not set to 'L'. Setting color_mode to 'L'")
+                self.config.color_mode = "L"
             
     
     def get_mutation_rates(self):
