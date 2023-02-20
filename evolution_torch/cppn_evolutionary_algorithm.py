@@ -10,7 +10,6 @@ import torch
 import os
 from cppn_torch import Node
 from cppn_torch.fitness_functions import correct_dims
-from cppn_torch.graph_util import name_to_fn
 from cppn_torch.util import get_avg_number_of_connections, get_avg_number_of_hidden_nodes, get_max_number_of_connections, visualize_network, get_max_number_of_hidden_nodes
 from evolution_torch.autoencoder import initialize_encoders, AutoEncoder
 
@@ -44,8 +43,12 @@ class CPPNEvolutionaryAlgorithm(object):
 
         self.fitness_function = config.fitness_function
         
+        if not hasattr(self,  "name_function_map"):
+            import cppn_torch.fitness_functions as ff
+            self.name_function_map = ff.__dict__
+        
         if not isinstance(config.fitness_function, Callable):
-            self.fitness_function = name_to_fn(config.fitness_function)
+            self.fitness_function = self.name_function_map.get(config.fitness_function)
             self.fitness_function_normed = self.fitness_function
             
         self.target = self.config.target.to(self.device)
