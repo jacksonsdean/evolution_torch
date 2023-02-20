@@ -300,7 +300,7 @@ class CPPNEvolutionaryAlgorithm(object):
             return
         img = b.get_image()
         if len(self.config.color_mode)<3:
-            img = img.repeat(1,1,3)
+            img = img.unsqueeze(-1).repeat(1,1,3)
         img = img.detach().cpu().numpy()
         plt.imsave(fname, img, cmap='gray')
         plt.close()
