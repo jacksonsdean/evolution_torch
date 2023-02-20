@@ -49,6 +49,11 @@ class CPPNEvolutionaryAlgorithm(object):
             self.fitness_function_normed = self.fitness_function
             
         self.target = self.config.target.to(self.device)
+        
+        if len(self.target.shape) < 3:
+            # grayscale image
+            self.config.color_mode = "L"
+            
     
     def get_mutation_rates(self):
         """Get the mutate rates for the current generation 
