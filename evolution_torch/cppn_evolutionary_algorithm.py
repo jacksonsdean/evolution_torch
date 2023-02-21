@@ -148,7 +148,12 @@ class CPPNEvolutionaryAlgorithm(object):
             print("WARN: run dir already exists, overwriting")
         else:
             os.makedirs(run_dir)
-            
+     
+        with open(os.path.join(run_dir, f"target.txt"), 'w') as f:
+            f.write(self.config.target_name)
+        
+        self.results.loc[self.run_number, "target"] = self.config.target_name
+        
         # save to run dir
         filename = os.path.join(run_dir, f"results.pkl")
         self.results.to_pickle(filename)
@@ -173,8 +178,6 @@ class CPPNEvolutionaryAlgorithm(object):
             save_results = self.results
         save_results.to_pickle(filename)
         
-        with open(os.path.join(run_dir, f"target.txt"), 'w') as f:
-            f.write(self.config.target_name)
             
     def update_fitness_function(self):
         """Update normalize fitness function if using a schedule or normalized fitness function"""
