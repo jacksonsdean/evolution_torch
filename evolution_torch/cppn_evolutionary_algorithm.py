@@ -156,9 +156,16 @@ class CPPNEvolutionaryAlgorithm(object):
         # save to output dir
         filename = os.path.join(self.config.output_dir, f"results.pkl")
         if os.path.exists(filename):
-            with open(filename, 'rb') as f:
-                save_results = pd.read_pickle(f)
-                save_results = save_results.append(self.results, ignore_index=True)
+            tries = 0
+            while tries < 5:
+                try:
+                    with open(filename, 'rb') as f:
+                        save_results = pd.read_pickle(f)
+                        save_results = save_results.append(self.results, ignore_index=True)
+                        break
+                except:
+                    tries += 1
+                    time.sleep(1)
         else:
             save_results = self.results
         save_results.to_pickle(filename)
