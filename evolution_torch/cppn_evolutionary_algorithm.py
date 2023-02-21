@@ -166,6 +166,9 @@ class CPPNEvolutionaryAlgorithm(object):
                 except:
                     tries += 1
                     time.sleep(1)
+            if tries == 5:
+                print("WARN: failed to read output_dir results file, overwriting")
+                save_results = self.results
         else:
             save_results = self.results
         save_results.to_pickle(filename)
@@ -173,8 +176,6 @@ class CPPNEvolutionaryAlgorithm(object):
         with open(os.path.join(run_dir, f"target.txt"), 'w') as f:
             f.write(self.config.target_name)
             
-            
-        
     def update_fitness_function(self):
         """Update normalize fitness function if using a schedule or normalized fitness function"""
         if self.config.fitness_schedule is not None:
