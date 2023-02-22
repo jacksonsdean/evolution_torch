@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools", "wheel", 'torch', 'numpy', 'matplotlib', 'scipy', 'scikit-image', 'functorch', 'tqdm', 'torchvision', 'piq', 'imageio','scikits-bootstrap', 'networkx']
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "evolution_torch"
+version = "2023.0.10"
+description = "Evolutionary algorithm implementation in PyTorch"
+authors = [
+    {name = "Jackson Dean", email = "jackson@downbeat.games"}
+]
+readme = "README.md"
+requires-python = ">=3.6"
+license = {file = "LICENSE"}
+keywords = ["cppn", "evolutionary algorithms", "pytorch", "neuroevolution"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+homepage = "https://github.com/jacksonsdean/evolution_torch"
+repository = "https://github.com/jacksonsdean/evolution_torch"
+bug_tracker = "https://github.com/jacksonsdean/evolution_torch/issues"
