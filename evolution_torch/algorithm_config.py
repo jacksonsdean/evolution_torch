@@ -74,9 +74,8 @@ def apply_condition(config, controls, condition, name, name_to_function_map):
             if k == "target":
                 config.target = v
                 config.target_name = config.target
-                # pilmode = "RGB" if len(config.color_mode) == 3 else "L"
-                # config.target = torch.tensor(iio.imread(config.target, pilmode=pilmode, as_gray=len(config.color_mode)==1), dtype=torch.float32, device=config.device)
-                config.target = torch.tensor(iio.imread(config.target, as_gray=len(config.color_mode)==1), dtype=torch.float32, device=config.device)
+                pilmode = "RGB" if len(config.color_mode) == 3 else "L"
+                config.target = torch.tensor(iio.imread(config.target, pilmode=pilmode, as_gray=len(config.color_mode)==1), dtype=torch.float32, device=config.device)
                 # config.target = config.target / 255.0
                 
                 
@@ -95,9 +94,8 @@ def apply_condition(config, controls, condition, name, name_to_function_map):
                 config.target = v
                 if isinstance(config.target, str):
                     config.target_name = config.target
-                    # pilmode = "RGB" if len(config.color_mode) == 3 else "L"
-                    # config.target = torch.tensor(iio.imread(config.target, pilmode=pilmode, as_gray=len(config.color_mode)==1), dtype=torch.float32, device=config.device)
-                    config.target = torch.tensor(iio.imread(config.target, as_gray=len(config.color_mode)==1), dtype=torch.float32, device=config.device)
+                    pilmode = "RGB" if len(config.color_mode) == 3 else "L"
+                    config.target = torch.tensor(iio.imread(config.target, pilmode=pilmode, as_gray=len(config.color_mode)==1), dtype=torch.float32, device=config.device)
 
                 config.res_h, config.res_w = config.target.shape[:2]
    
