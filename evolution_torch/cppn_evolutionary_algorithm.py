@@ -19,6 +19,9 @@ class CPPNEvolutionaryAlgorithm(object):
             torch.autograd.set_grad_enabled(True)
         else:
             torch.autograd.set_grad_enabled(False)
+            
+        self.inputs = None # default to coord inputs in CPPN class
+        
         self.gen = 0
         self.debug_output = debug_output
         self.show_output = False
@@ -103,7 +106,7 @@ class CPPNEvolutionaryAlgorithm(object):
             
             # update novelty encoder   
             initialize_encoders(self.config, self.target)  
-            for g in self.population: g.get_image()
+            for g in self.population: g.get_image(inputs=self.inputs)
             self.update_fitnesses_and_novelty()
             self.population = sorted(self.population, key=lambda x: x.fitness.item(), reverse=True) # sort by fitness
             self.solution = self.population[0].clone(cpu=True) 
@@ -223,7 +226,7 @@ class CPPNEvolutionaryAlgorithm(object):
             pbar = range(len(self.population))
 
         # fits = self.fitness_function(torch.stack([g.get_image() for g in self.population]), self.target).detach() # TODO maybe don't detach and experiment with autograd?
-        imgs = torch.stack([g.get_image() for g in self.population])
+        imgs = torch.stack([g.get_image(self.inputs) for g in self.population])
         imgs, target = correct_dims(imgs, self.target)
         fits = self.fitness_function(imgs, target)
         
@@ -306,7 +309,7 @@ class CPPNEvolutionaryAlgorithm(object):
         print()
         self.print_best()
         self.save_best_network_image()
-        img = self.get_best().get_image().cpu().numpy()
+        img = self.get_best().get_image(self.inputs).cpu().numpy()
         plt.imshow(img, cmap='gray')
         plt.show()
         
@@ -314,14 +317,14 @@ class CPPNEvolutionaryAlgorithm(object):
         b = self.get_best()
         if b is None:
             return
-        img = b.get_image()
+        img = b.get_image(self.inputs)
         if len(self.config.color_mode)<3:
             img = img.unsqueeze(-1).repeat(1,1,3)
         img = img.detach().cpu().numpy()
         plt.imsave(fname, img, cmap='gray')
         plt.close()
         # if hasattr(self, "this_gen_best") and self.this_gen_best is not None:
-        #     img = self.this_gen_best.get_image()
+        #     img = self.this_gen_best.get_image(self.inputs)
         #     if len(self.config.color_mode)<3:
         #         img = img.repeat(1,1,3)
         #     img = img.detach().cpu().numpy()
