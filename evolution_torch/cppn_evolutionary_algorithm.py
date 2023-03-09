@@ -8,7 +8,7 @@ from tqdm import trange
 import pandas as pd
 import torch
 import os
-from cppn_torch import Node
+from cppn_torch.graph_util import activate_population
 from cppn_torch.fitness_functions import correct_dims
 from cppn_torch.util import get_avg_number_of_connections, get_avg_number_of_hidden_nodes, get_max_number_of_connections, visualize_network, get_max_number_of_hidden_nodes
 from evolution_torch.autoencoder import initialize_encoders, AutoEncoder
@@ -106,7 +106,10 @@ class CPPNEvolutionaryAlgorithm(object):
             
             # update novelty encoder   
             initialize_encoders(self.config, self.target)  
-            for g in self.population: g.get_image(inputs=self.inputs)
+            if self.config.activation_mode == "population":
+                activate_population(self.population, self.config, self.inputs)
+            else:
+                for g in self.population: g.get_image(inputs=self.inputs)
             self.update_fitnesses_and_novelty()
             self.population = sorted(self.population, key=lambda x: x.fitness.item(), reverse=True) # sort by fitness
             self.solution = self.population[0].clone(cpu=True) 
@@ -226,7 +229,10 @@ class CPPNEvolutionaryAlgorithm(object):
             pbar = range(len(self.population))
 
         # fits = self.fitness_function(torch.stack([g.get_image() for g in self.population]), self.target).detach() # TODO maybe don't detach and experiment with autograd?
-        imgs = torch.stack([g.get_image(self.inputs) for g in self.population])
+        if self.config.activation_mode == "population":
+            imgs = activate_population(self.population, self.config, self.inputs)
+        else:
+            imgs = torch.stack([g.get_image(self.inputs) for g in self.population])
         imgs, target = correct_dims(imgs, self.target)
         fits = self.fitness_function(imgs, target)
         
