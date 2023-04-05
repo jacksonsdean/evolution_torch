@@ -1,10 +1,12 @@
 """Stores configuration parameters for the CPPN."""
+import logging
 import random
 import torch
 import imageio as iio
 from cppn_torch.activation_functions import *
 import cppn_torch.activation_functions as af
 from cppn_torch import CPPNConfig as Config
+from cppn_torch.util import center_crop, resize
 
 class AlgorithmConfig(Config):
     """Stores configuration parameters for the CPPN."""
@@ -37,6 +39,8 @@ class AlgorithmConfig(Config):
         self.min_fitness = None
         self.max_fitness = None
         
+        self.novelty_mode = None
+        
         """DGNA: the probability of adding a node is 0.5 and the
         probability of adding a connection is 0.4.
         SGNA: probability of adding a node is 0.05 and the
@@ -60,7 +64,32 @@ class AlgorithmConfig(Config):
         
         
         self._make_dirty()
-        
+    
+    
+
+def resize_target(config):
+    if not config.target_resize:
+        return 
+    device = config.target.device
+    tar = config.target.cpu().numpy()
+    
+    # if len(config.color_mode) < 3:
+    res_fact = tar.shape[0] / config.target_resize[0], tar.shape[1] / config.target_resize[1]
+    tar = resize(tar, (tar.shape[0] // int(res_fact[0]), tar.shape[1] // int(res_fact[1])))
+    tar = center_crop(tar, config.target_resize[0], config.target_resize[1])
+    # else:
+    #     tar = tar.repeat(3,1,1).permute(1,2,0).cpu().numpy()
+    #     res_fact = tar.shape[0] / config.target_resize[0], tar.shape[1] / config.target_resize[1]
+    #     tar = resize(tar, (tar.shape[0] // int(res_fact[0]), tar.shape[1] // int(res_fact[1])))
+    #     tar = center_crop(tar, config.target_resize[0], config.target_resize[1])
+    #     tar = tar.mean(-1)
+    #     config.target = torch.tensor(tar, dtype=torch.float32, device=device)
+    #     config.set_res(*config.target_resize)
+    
+    config.target = torch.tensor(tar, dtype=torch.float32, device=device)
+    config.set_res(*config.target_resize)
+    
+    
 def apply_condition(config, controls, condition, name, name_to_function_map):
     config.name = name
     config.experiment_condition = name
@@ -74,10 +103,11 @@ def apply_condition(config, controls, condition, name, name_to_function_map):
             if k == "target":
                 config.target = v
                 config.target_name = config.target
+                if 'color_mode' in controls:
+                    config.color_mode = controls['color_mode']
                 pilmode = "RGB" if len(config.color_mode) == 3 else "L"
                 config.target = torch.tensor(iio.imread(config.target, pilmode=pilmode, as_gray=len(config.color_mode)==1), dtype=torch.float32, device=config.device)
                 # config.target = config.target / 255.0
-                
                 
                 config.res_h, config.res_w = config.target.shape[:2]
         
@@ -91,6 +121,8 @@ def apply_condition(config, controls, condition, name, name_to_function_map):
                 print(f"\t\tapply {k}->{v}")
                 config.apply_condition(k, v)
             if k == "target":
+                if 'color_mode' in condition:
+                    config.color_mode = condition['color_mode']
                 config.target = v
                 if isinstance(config.target, str):
                     config.target_name = config.target
@@ -112,8 +144,10 @@ def apply_condition(config, controls, condition, name, name_to_function_map):
     if config.target.max() > 1.0:
         config.target = config.target.to(torch.float32) /255.0
     
+    resize_target(config)
+    
     if len(config.target.shape) < len(config.color_mode):
-        print("Warning: color mode is RGB or HSV but target is grayscale. Setting color mode to L.")
+        logging.warning("Color mode is RGB or HSV but target is grayscale. Setting color mode to L.")
         config.color_mode = "L"
         
     if config.color_mode == "L":
@@ -122,8 +156,7 @@ def apply_condition(config, controls, condition, name, name_to_function_map):
                 
     
     if len(config.color_mode) != config.num_outputs:
-        print("WARNING: color_mode does not match num_outputs")
-        print("\tsetting num_outputs to len(color_mode)")
+        logging.warning("WARNING: color_mode does not match num_outputs. Setting num_outputs to len(color_mode)")
         config.num_outputs = len(config.color_mode)
     config.device = torch.device(config.device)
     config.target = config.target.to(config.device)     

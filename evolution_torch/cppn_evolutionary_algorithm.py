@@ -4,28 +4,42 @@ import time
 from typing import Callable
 import matplotlib.pyplot as plt
 import numpy as np
-from tqdm import trange
+import __main__ as main
+if not hasattr(main, '__file__'):
+    try:
+        from tqdm.notebook import trange
+    except ImportError:
+        from tqdm import trange
+else:
+    from tqdm import trange
 import pandas as pd
 import torch
+import itertools
 import os
 from cppn_torch.graph_util import activate_population
 from cppn_torch.fitness_functions import correct_dims
 from cppn_torch.util import get_avg_number_of_connections, get_avg_number_of_hidden_nodes, get_max_number_of_connections, visualize_network, get_max_number_of_hidden_nodes
-from evolution_torch.autoencoder import initialize_encoders, AutoEncoder
+from cppn_torch.image_cppn import ImageCPPN
+import copy 
+import logging
 
 class CPPNEvolutionaryAlgorithm(object):
     def __init__(self, config, debug_output=False) -> None:
-        if config.with_grad:
+        self.config = config
+        
+        if self.config.with_grad:
             torch.autograd.set_grad_enabled(True)
         else:
             torch.autograd.set_grad_enabled(False)
-            
-        self.inputs = None # default to coord inputs in CPPN class
+        if self.config.autoencoder_frequency > 0 and self.gen % self.config.autoencoder_frequency == 0:
+            from evolution_torch.autoencoder import initialize_encoders, AutoEncoder
+        
+        if not hasattr(self, "inputs"):
+            self.inputs = None # default to coord inputs in CPPN class
         
         self.gen = 0
         self.debug_output = debug_output
         self.show_output = False
-        self.config = config
         
         self.results = pd.DataFrame(columns=['condition', 'run', 'gen', 'fitness', 'diversity', 'population', 'avg_num_connections', 'avg_num_hidden_nodes', 'max_num_connections', 'max_num_hidden_nodes', 'time'])
                 
@@ -42,16 +56,20 @@ class CPPNEvolutionaryAlgorithm(object):
         
         self.solution_fitness = -math.inf
         self.best_genome = None
+        if self.config.genome_type is None:
+            self.config.genome_type = ImageCPPN
         self.genome_type = config.genome_type
 
         self.fitness_function = config.fitness_function
+        
+        self.fitness_function_measures_genome = False
         
         if not hasattr(self,  "name_function_map"):
             import cppn_torch.fitness_functions as ff
             self.name_function_map = ff.__dict__
         
-        if not isinstance(config.fitness_function, Callable):
-            self.fitness_function = self.name_function_map.get(config.fitness_function)
+        if not isinstance(self.config.fitness_function, Callable):
+            self.fitness_function = self.name_function_map.get(self.config.fitness_function)
             self.fitness_function_normed = self.fitness_function
             
         self.target = self.config.target.to(self.device)
@@ -59,9 +77,17 @@ class CPPNEvolutionaryAlgorithm(object):
         if len(self.target.shape) < 3:
             # grayscale image
             if self.config.color_mode != "L":
-                print("WARNING: target image is grayscale, but color_mode is not set to 'L'. Setting color_mode to 'L'")
+                logging.warning("Target image is grayscale, but color_mode is not set to 'L'. Setting color_mode to 'L'")
                 self.config.color_mode = "L"
-            
+                
+        if self.config.res_w != self.target.shape[0]:
+            self.config.res_w = self.target.shape[0]
+            logging.warning("Target image width does not match config.res_w. Setting config.res_w to target image width")
+        if self.config.res_h != self.target.shape[1]:
+            self.config.res_h = self.target.shape[1]
+            logging.warning("Target image height does not match config.res_h. Setting config.res_h to target image height")
+
+        
     
     def get_mutation_rates(self):
         """Get the mutate rates for the current generation 
@@ -104,8 +130,9 @@ class CPPNEvolutionaryAlgorithm(object):
             for i in range(self.config.population_size): 
                 self.population.append(self.genome_type(self.config)) # generate new random individuals as parents
             
-            # update novelty encoder   
-            initialize_encoders(self.config, self.target)  
+            # update novelty encoder 
+            if self.config.novelty_mode == "encoder":  
+                initialize_encoders(self.config, self.target)  
             if self.config.activation_mode == "population":
                 activate_population(self.population, self.config, self.inputs)
             else:
@@ -124,7 +151,7 @@ class CPPNEvolutionaryAlgorithm(object):
                 self.generation_end()
                 b = self.get_best()
                 if b is not None:
-                    pbar.set_postfix_str(f"f: {b.fitness:.4f} d:{self.diversity:.4f}")
+                    pbar.set_postfix_str(f"f: {b.fitness:.4f} (id:{b.id}) d:{self.diversity:.4f}")
                 else:
                     pbar.set_postfix_str(f"d:{self.diversity:.4f}")
             
@@ -151,7 +178,7 @@ class CPPNEvolutionaryAlgorithm(object):
         
         run_dir = os.path.join(cond_dir, f"run_{self.config.run_id:04d}")
         if os.path.exists(run_dir):
-            print("WARN: run dir already exists, overwriting")
+            logging.warning(f"run dir already exists, overwriting: {run_dir}")
         else:
             os.makedirs(run_dir)
      
@@ -172,13 +199,13 @@ class CPPNEvolutionaryAlgorithm(object):
                 try:
                     with open(filename, 'rb') as f:
                         save_results = pd.read_pickle(f)
-                        save_results = save_results.append(self.results, ignore_index=True)
+                        save_results = pd.concat([save_results, self.results]).reset_index(drop=True)
                         break
                 except:
                     tries += 1
                     time.sleep(1)
             if tries == 5:
-                print("WARN: failed to read output_dir results file, overwriting")
+                logging.warning("Failed to read output_dir results file, overwriting")
                 save_results = self.results
         else:
             save_results = self.results
@@ -234,7 +261,11 @@ class CPPNEvolutionaryAlgorithm(object):
         else:
             imgs = torch.stack([g.get_image(self.inputs) for g in self.population])
         imgs, target = correct_dims(imgs, self.target)
-        fits = self.fitness_function(imgs, target)
+        
+        if self.fitness_function_measures_genome:
+            fits = self.fitness_function(self.population, target)
+        else:
+            fits = self.fitness_function(imgs, target)
         
         for i in pbar:
             if self.show_output:
@@ -272,8 +303,13 @@ class CPPNEvolutionaryAlgorithm(object):
                 self.population[0].discard_grads()
             self.this_gen_best = self.population[0].clone(cpu=True)  # still sorted by fitness
         
-        # std_distance, avg_distance, max_diff = calculate_diversity_full(self.population)
-        std_distance, avg_distance, max_diff = calculate_diversity_stochastic(self.population)
+        div_mode = self.config.get('diversity_mode', None)
+        if div_mode == 'full':
+            std_distance, avg_distance, max_diff = calculate_diversity_full(self.population)
+        elif div_mode == 'stochastic':
+            std_distance, avg_distance, max_diff = calculate_diversity_stochastic(self.population)
+        else:
+            std_distance, avg_distance, max_diff = torch.zeros(1)[0], torch.zeros(1)[0], torch.zeros(1)[0]
         self.diversity = avg_distance
         n_nodes = get_avg_number_of_hidden_nodes(self.population)
         n_connections = get_avg_number_of_connections(self.population)
@@ -282,17 +318,19 @@ class CPPNEvolutionaryAlgorithm(object):
 
         if not skip_fitness:
             # fitness
-            if self.population[0].fitness > self.solution_fitness: # if the new parent is the best found so far
+            if self.population[0].fitness.item() > self.solution_fitness: # if the new parent is the best found so far
                 self.solution = self.population[0]                 # update best solution records
-                self.solution_fitness = self.solution.fitness
+                self.solution_fitness = self.solution.fitness.item()
                 self.solution_generation = self.gen
                 self.best_genome = self.solution
             
             os.makedirs(os.path.join(self.config.output_dir, 'images'), exist_ok=True)
             self.save_best_img(os.path.join(self.config.output_dir, "images", f"current_best_output.png"))
+            
+            
         
         if self.solution is not None:
-            self.results.loc[len(self.results.index)] = [self.config.experiment_condition, self.config.run_id, self.gen, self.solution_fitness.cpu().item(), avg_distance.item(), float(len(self.population)), n_connections, n_nodes, max_connections, max_nodes, time.time() - self.start_time]
+            self.results.loc[len(self.results.index)] = [self.config.experiment_condition, self.config.run_id, self.gen, self.solution_fitness, avg_distance.item(), float(len(self.population)), n_connections, n_nodes, max_connections, max_nodes, time.time() - self.start_time]
         else:
             self.results.loc[len(self.results.index)] = [self.config.experiment_condition, self.config.run_id, self.gen, 0, avg_distance.item(), float(len(self.population)), n_connections, n_nodes, max_connections, max_nodes, time.time() - self.start_time]
 
@@ -323,7 +361,7 @@ class CPPNEvolutionaryAlgorithm(object):
         b = self.get_best()
         if b is None:
             return
-        img = b.get_image(self.inputs)
+        img = b.get_image(self.inputs, channel_first=False)
         if len(self.config.color_mode)<3:
             img = img.unsqueeze(-1).repeat(1,1,3)
         img = img.detach().cpu().numpy()
@@ -364,7 +402,7 @@ class CPPNEvolutionaryAlgorithm(object):
 
 def calculate_diversity_full(population):
     if len(population) == 0:
-        return 0, 0, 0
+        return torch.zeros(1)[0], torch.zeros(1)[0], torch.zeros(1)[0]
     # very slow, compares every genome against every other
     diffs = []
     for i in population:
@@ -379,16 +417,19 @@ def calculate_diversity_full(population):
 
 def calculate_diversity_stochastic(population):
     if len(population) == 0:
-        return 0, 0, 0
+        return torch.zeros(1)[0], torch.zeros(1)[0], torch.zeros(1)[0]
     # compare 10% of population
     diffs = torch.zeros(len(population)//10, device=population[0].config.device)
     pop = population
-    for i in range(int(len(population)//10)):
-        g1 = random.choice(pop)
-        g2 = random.choice(pop)
+    num = len(pop)//10
+    pairs = itertools.combinations(pop, 2)
+    pairs = random.sample(list(pairs), num)
+    for i, (g1, g2) in enumerate(pairs):
         diffs[i] = g1.genetic_difference(g2)
-
+        assert not torch.isnan(diffs[i]).any(), f"nan in diffs {i} {g1.id} {g2.id}" 
+    max_diff = torch.max(diffs) if(len(diffs)>0) else torch.tensor(0).to(population[0].config.device)
+    if max_diff == 0:
+        return torch.zeros(1)[0], torch.zeros(1)[0], torch.zeros(1)[0]
     std_distance = torch.std(diffs)
     avg_distance = torch.mean(diffs)
-    max_diff = torch.max(diffs) if(len(diffs)>0) else torch.tensor(0).to(population[0].config.device)
     return std_distance, avg_distance, max_diff
