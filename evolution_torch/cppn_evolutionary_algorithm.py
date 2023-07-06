@@ -151,7 +151,7 @@ class CPPNEvolutionaryAlgorithm(object):
                 self.generation_end()
                 b = self.get_best()
                 if b is not None:
-                    pbar.set_postfix_str(f"f: {b.fitness:.4f} (id:{b.id}) d:{self.diversity:.4f}")
+                    pbar.set_postfix_str(f"f: {b.fitness:.4f} (id:{b.id}) d:{self.diversity:.4f} u:{self.n_unique}")
                 else:
                     pbar.set_postfix_str(f"d:{self.diversity:.4f}")
             
@@ -185,7 +185,7 @@ class CPPNEvolutionaryAlgorithm(object):
         with open(os.path.join(run_dir, f"target.txt"), 'w') as f:
             f.write(self.config.target_name)
         
-        self.results.loc[self.run_number, "target"] = self.config.target_name
+        self.results.loc[self.results["run_id"] == self.config.run_id, "target"] = self.config.target_name
         
         # save to run dir
         filename = os.path.join(run_dir, f"results.pkl")
@@ -316,6 +316,8 @@ class CPPNEvolutionaryAlgorithm(object):
         max_connections = get_max_number_of_connections(self.population)
         max_nodes = get_max_number_of_hidden_nodes(self.population)
 
+        self.n_unique = len(set([g.id for g in self.population]))
+
         if not skip_fitness:
             # fitness
             if self.population[0].fitness.item() > self.solution_fitness: # if the new parent is the best found so far
@@ -331,6 +333,10 @@ class CPPNEvolutionaryAlgorithm(object):
         
         if self.solution is not None:
             self.results.loc[len(self.results.index)] = [self.config.experiment_condition, self.config.run_id, self.gen, self.solution_fitness, avg_distance.item(), float(len(self.population)), n_connections, n_nodes, max_connections, max_nodes, time.time() - self.start_time]
+            plt.close()
+            plt.plot(self.results['gen'], self.results['fitness'])
+            plt.savefig(os.path.join(self.config.output_dir, "current_fitness.png"))
+            plt.close()
         else:
             self.results.loc[len(self.results.index)] = [self.config.experiment_condition, self.config.run_id, self.gen, 0, avg_distance.item(), float(len(self.population)), n_connections, n_nodes, max_connections, max_nodes, time.time() - self.start_time]
 
