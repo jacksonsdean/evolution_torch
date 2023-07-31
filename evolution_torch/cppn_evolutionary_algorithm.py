@@ -41,7 +41,7 @@ class CPPNEvolutionaryAlgorithm(object):
         self.debug_output = debug_output
         self.show_output = False
         
-        self.results = pd.DataFrame(columns=['condition', 'target', 'run', 'gen', 'fitness', 'diversity', 'population', 'avg_num_connections', 'avg_num_hidden_nodes', 'max_num_connections', 'max_num_hidden_nodes', 'time'])
+        self.results = pd.DataFrame(columns=['condition', 'target', 'run', 'gen', 'fitness', 'diversity', 'population', 'avg_num_connections', 'avg_num_hidden_nodes', 'max_num_connections', 'max_num_hidden_nodes', 'time', 'total_offspring'])
                 
         self.solutions_over_time = []
         self.time_elapsed = 0
@@ -53,6 +53,7 @@ class CPPNEvolutionaryAlgorithm(object):
         self.device = config.device
         self.run_number = 0
         self.diversity = 0
+        self.total_offspring = 0
         
         self.solution_fitness = -math.inf
         self.best_genome = None
@@ -330,7 +331,7 @@ class CPPNEvolutionaryAlgorithm(object):
             
         
         if self.solution is not None:
-            self.results.loc[len(self.results.index)] = [self.config.experiment_condition, self.config.target_name, self.config.run_id, self.gen, self.solution_fitness, avg_distance.item(), float(len(self.population)), n_connections, n_nodes, max_connections, max_nodes, time.time() - self.start_time]
+            self.results.loc[len(self.results.index)] = [self.config.experiment_condition, self.config.target_name, self.config.run_id, self.gen, self.solution_fitness, avg_distance.item(), float(len(self.population)), n_connections, n_nodes, max_connections, max_nodes, time.time() - self.start_time, self.total_offspring]
             plt.close()
             plt.plot(self.results['gen'], self.results['fitness'])
             plt.savefig(os.path.join(self.config.output_dir, "current_fitness.png"))
