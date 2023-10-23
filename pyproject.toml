@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "evolution_torch"
-version = "2023.0.13"
+version = "2023.0.14"
 description = "Evolutionary algorithm implementation in PyTorch"
 authors = [
     {name = "Jackson Dean", email = "jackson@downbeat.games"}

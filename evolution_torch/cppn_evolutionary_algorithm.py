@@ -41,7 +41,7 @@ class CPPNEvolutionaryAlgorithm(object):
         self.debug_output = debug_output
         self.show_output = False
         
-        self.results = pd.DataFrame(columns=['condition', 'target', 'run', 'gen', 'fitness', 'diversity', 'population', 'avg_num_connections', 'avg_num_hidden_nodes', 'max_num_connections', 'max_num_hidden_nodes', 'time', 'total_offspring'])
+        self.results = pd.DataFrame(columns=['condition', 'target', 'run', 'gen', 'fitness', 'mean_fitness', 'diversity', 'population', 'avg_num_connections', 'avg_num_hidden_nodes', 'max_num_connections', 'max_num_hidden_nodes', 'time', 'total_offspring'])
                 
         self.solutions_over_time = []
         self.time_elapsed = 0
@@ -88,7 +88,7 @@ class CPPNEvolutionaryAlgorithm(object):
             self.config.res_h = self.target.shape[1]
             logging.warning("Target image height does not match config.res_h. Setting config.res_h to target image height")
 
-        
+        self.fitesses = {}
     
     def get_mutation_rates(self):
         """Get the mutate rates for the current generation 
@@ -152,7 +152,7 @@ class CPPNEvolutionaryAlgorithm(object):
                 self.generation_end()
                 b = self.get_best()
                 if b is not None:
-                    pbar.set_postfix_str(f"f: {b.fitness:.4f} (id:{b.id}) d:{self.diversity:.4f} u:{self.n_unique}")
+                    pbar.set_postfix_str(f"bf: {self.fitnesses[b.id]:.4f} (id:{b.id}) d:{self.diversity:.4f} af:{np.mean(list(self.fitnesses.values())):.4f} u:{self.n_unique}")
                 else:
                     pbar.set_postfix_str(f"d:{self.diversity:.4f}")
             
@@ -295,12 +295,12 @@ class CPPNEvolutionaryAlgorithm(object):
         return solution_archive
     
     def record_keeping(self, skip_fitness=False):
-        
-        if len(self.population) > 0:
-            self.population = sorted(self.population, key=lambda x: x.fitness.item(), reverse=True) # sort by fitness
-            if self.config.with_grad:
-                self.population[0].discard_grads()
-            self.this_gen_best = self.population[0].clone(cpu=True)  # still sorted by fitness
+        if len(self.fitnesses) > 0:
+            if len(self.population) > 0:
+                self.population = sorted(self.population, key=lambda x: self.fitnesses[x.id], reverse=True) # sort by fitness
+                if self.config.with_grad:
+                    self.population[0].discard_grads()
+                self.this_gen_best = self.population[0].clone(self.config, cpu=True)  # still sorted by fitness
         
         div_mode = self.config.get('diversity_mode', None)
         if div_mode == 'full':
@@ -319,25 +319,25 @@ class CPPNEvolutionaryAlgorithm(object):
 
         if not skip_fitness:
             # fitness
-            if self.population[0].fitness.item() > self.solution_fitness: # if the new parent is the best found so far
+            if self.fitnesses[self.population[0].id] > self.solution_fitness: # if the new parent is the best found so far
                 self.solution = self.population[0]                 # update best solution records
-                self.solution_fitness = self.solution.fitness.item()
+                self.solution_fitness = self.fitnesses[self.population[0].id]
                 self.solution_generation = self.gen
                 self.best_genome = self.solution
             
             os.makedirs(os.path.join(self.config.output_dir, 'images'), exist_ok=True)
             self.save_best_img(os.path.join(self.config.output_dir, "images", f"current_best_output.png"))
-            
-            
         
         if self.solution is not None:
-            self.results.loc[len(self.results.index)] = [self.config.experiment_condition, self.config.target_name, self.config.run_id, self.gen, self.solution_fitness, avg_distance.item(), float(len(self.population)), n_connections, n_nodes, max_connections, max_nodes, time.time() - self.start_time, self.total_offspring]
+            self.results.loc[len(self.results.index)] = [self.config.experiment_condition, self.config.target_name, self.config.run_id, self.gen, self.solution_fitness, np.mean(list(self.fitnesses.values())),avg_distance.item(), float(len(self.population)), n_connections, n_nodes, max_connections, max_nodes, time.time() - self.start_time, self.total_offspring]
             plt.close()
-            plt.plot(self.results['gen'], self.results['fitness'])
+            plt.plot(self.results['gen'], self.results['fitness'], label='best')
+            plt.plot(self.results['gen'], self.results['mean_fitness'], label='mean')
+            plt.legend()
             plt.savefig(os.path.join(self.config.output_dir, "current_fitness.png"))
             plt.close()
         else:
-            self.results.loc[len(self.results.index)] = [self.config.experiment_condition, self.config.run_id, self.gen, 0, avg_distance.item(), float(len(self.population)), n_connections, n_nodes, max_connections, max_nodes, time.time() - self.start_time]
+            self.results.loc[len(self.results.index)] = [self.config.experiment_condition, self.config.target_name, self.config.run_id, self.gen, 0.0,  np.mean(list(self.fitnesses.values())), avg_distance.item(), float(len(self.population)), n_connections, n_nodes, max_connections, max_nodes, time.time() - self.start_time, self.total_offspring]
 
     def mutate(self, child):
         rates = self.get_mutation_rates()
@@ -346,8 +346,9 @@ class CPPNEvolutionaryAlgorithm(object):
     
     def get_best(self):
         if len(self.population) == 0:
+            print("No individuals in population")
             return None
-        max_fitness_individual = max(self.population, key=lambda x: x.fitness.item())
+        max_fitness_individual = max(self.population, key=lambda x: self.fitnesses[x.id])
         return max_fitness_individual
     
     def print_best(self):
@@ -366,6 +367,7 @@ class CPPNEvolutionaryAlgorithm(object):
         b = self.get_best()
         if b is None:
             return
+        b.to(self.inputs.device)
         img = b.get_image(self.inputs, channel_first=False)
         if len(self.config.color_mode)<3:
             img = img.unsqueeze(-1).repeat(1,1,3)

@@ -16,6 +16,7 @@ class AlgorithmConfig(Config):
         super().__init__()
         # overrides:
         self.seed = random.randint(0, 100000)
+        self.do_profile=False
         self.activations=  [sin, sigmoid, gauss, identity, round_activation, abs_activation, pulse] # innovation engines
         
         # algorithm specific:
