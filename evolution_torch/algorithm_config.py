@@ -74,18 +74,15 @@ def resize_target(config):
     device = config.target.device
     tar = config.target.cpu().numpy()
     
-    # if len(config.color_mode) < 3:
+    # check if shape is already correct
+    if tar.shape[:2] == config.target_resize:
+        return
+    
     res_fact = tar.shape[0] / config.target_resize[0], tar.shape[1] / config.target_resize[1]
+    if res_fact[0] == 0.0 or res_fact[1] == 0.0:
+        raise Exception("Target is too small to resize to target_resize")
     tar = resize(tar, (tar.shape[0] // int(res_fact[0]), tar.shape[1] // int(res_fact[1])))
     tar = center_crop(tar, config.target_resize[0], config.target_resize[1])
-    # else:
-    #     tar = tar.repeat(3,1,1).permute(1,2,0).cpu().numpy()
-    #     res_fact = tar.shape[0] / config.target_resize[0], tar.shape[1] / config.target_resize[1]
-    #     tar = resize(tar, (tar.shape[0] // int(res_fact[0]), tar.shape[1] // int(res_fact[1])))
-    #     tar = center_crop(tar, config.target_resize[0], config.target_resize[1])
-    #     tar = tar.mean(-1)
-    #     config.target = torch.tensor(tar, dtype=torch.float32, device=device)
-    #     config.set_res(*config.target_resize)
     
     config.target = torch.tensor(tar, dtype=torch.float32, device=device)
     config.set_res(*config.target_resize)
