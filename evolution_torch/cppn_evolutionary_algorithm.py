@@ -137,7 +137,7 @@ class CPPNEvolutionaryAlgorithm(object):
             if self.config.activation_mode == "population":
                 activate_population(self.population, self.config, self.inputs)
             else:
-                for g in self.population: g.get_image(inputs=self.inputs)
+                for g in self.population: g(inputs=self.inputs)
             self.update_fitnesses_and_novelty()
             self.population = sorted(self.population, key=lambda x: x.fitness.item(), reverse=True) # sort by fitness
             self.solution = self.population[0].clone(cpu=True) 
@@ -258,7 +258,7 @@ class CPPNEvolutionaryAlgorithm(object):
         if self.config.activation_mode == "population":
             imgs = activate_population(self.population, self.config, self.inputs)
         else:
-            imgs = torch.stack([g.get_image(self.inputs) for g in self.population])
+            imgs = torch.stack([g(self.inputs) for g in self.population])
         imgs, target = correct_dims(imgs, self.target)
         
         if self.fitness_function_measures_genome:
@@ -298,8 +298,8 @@ class CPPNEvolutionaryAlgorithm(object):
         if len(self.fitnesses) > 0:
             if len(self.population) > 0:
                 self.population = sorted(self.population, key=lambda x: self.fitnesses[x.id], reverse=True) # sort by fitness
-                if self.config.with_grad:
-                    self.population[0].discard_grads()
+                # if self.config.with_grad:
+                    # self.population[0].discard_grads()
                 self.this_gen_best = self.population[0].clone(self.config, cpu=True)  # still sorted by fitness
         
         div_mode = self.config.get('diversity_mode', None)
@@ -359,7 +359,7 @@ class CPPNEvolutionaryAlgorithm(object):
         print()
         self.print_best()
         self.save_best_network_image()
-        img = self.get_best().get_image(self.inputs).cpu().numpy()
+        img = self.get_best()(self.inputs).cpu().numpy()
         plt.imshow(img, cmap='gray')
         plt.show()
         
@@ -368,7 +368,7 @@ class CPPNEvolutionaryAlgorithm(object):
         if b is None:
             return
         b.to(self.inputs.device)
-        img = b.get_image(self.inputs, channel_first=False)
+        img = b(self.inputs, channel_first=False)
         if len(self.config.color_mode)<3:
             img = img.unsqueeze(-1).repeat(1,1,3)
         img = img.detach().cpu().numpy()
